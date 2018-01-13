@@ -1,0 +1,14 @@
+clear all;
+
+obj = videoinput('winvideo',1);
+
+set(obj,'ReturnedColorSpace','grayscale');
+
+data=getsnapshot(obj);
+
+faceDetector = vision.CascadeObjectDetector;
+
+bboxes = step(faceDetector, data);
+
+IFaces = insertObjectAnnotation(data, 'rectangle', bboxes, 'Face');
+   figure, imshow(IFaces), title('Detected faces');

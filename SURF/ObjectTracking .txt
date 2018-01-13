@@ -1,0 +1,93 @@
+function ObjectTracking()
+
+
+obj = setupSystemObjects();
+
+
+
+while ~isDone(obj.reader)
+    frame = readFrame();
+    [centroids, bboxes, mask] = detectObjects(frame);
+    bboxes
+    if ~isempty(bboxes)
+        I=imcrop(frame,bboxes(1,:));
+        I=I(:,:,1);
+        
+        points_box=detectSURFFeatures(I);
+        
+        points=detectSURFFeatures(frame(:,:,1));
+        
+        
+        [boxFeatures, points_box] = extractFeatures(I, points_box);
+        [sceneFeatures, points] = extractFeatures(frame(:,:,1),points);
+
+        boxPairs = matchFeatures(boxFeatures, sceneFeatures);
+        
+        matchedBoxPoints = points_box(boxPairs(:, 1), :);
+        matchedScenePoints = points(boxPairs(:, 2), :);
+        
+        
+showMatchedFeatures(I, frame(:,:,1), matchedBoxPoints, ...
+    matchedScenePoints, 'montage');
+    hold on;
+    %plot(matchedScenePoints);
+        
+    end
+    displayTrackingResults();
+    
+    
+end
+
+imcrop(frame,bboxes(1,:));
+
+function obj = setupSystemObjects()
+       
+        obj.reader = vision.VideoFileReader('test.mp4');
+
+        
+        obj.videoPlayer = vision.VideoPlayer('Position', [20, 400, 700, 400]);
+        obj.maskPlayer = vision.VideoPlayer('Position', [740, 400, 700, 400]);
+
+        
+        obj.detector = vision.ForegroundDetector('NumGaussians', 3, ...
+            'NumTrainingFrames', 40, 'MinimumBackgroundRatio', 0.7);
+
+       
+        obj.blobAnalyser = vision.BlobAnalysis('BoundingBoxOutputPort', true, ...
+            'AreaOutputPort', true, 'CentroidOutputPort', true, ...
+            'MinimumBlobArea', 400);
+end
+function frame = readFrame()
+        frame = obj.reader.step();
+end
+
+function [centroids, bboxes, mask] = detectObjects(frame)
+
+        % Detect foreground.
+        mask = obj.detector.step(frame);
+
+        % Apply morphological operations
+        mask = imopen(mask, strel('rectangle', [3,3]));
+        mask = imclose(mask, strel('rectangle', [15, 15]));
+        mask = imfill(mask, 'holes');
+
+        % Perform blob analysis
+        [~, centroids, bboxes] = obj.blobAnalyser.step(mask);
+end
+
+function displayTrackingResults()
+     
+        frame = im2uint8(frame);
+        mask = uint8(repmat(mask, [1, 1, 3])) .* 255;
+        label='obj';
+        % Draw the objects on the frame.
+        frame = insertObjectAnnotation(frame, 'rectangle', ...
+            bboxes, label);
+        % Draw the objects on the mask.
+        mask = insertObjectAnnotation(mask, 'rectangle', ...
+            bboxes, label);
+        obj.maskPlayer.step(mask);
+        obj.videoPlayer.step(frame);
+end
+
+end

@@ -1,0 +1,56 @@
+clear all;
+obj = videoinput('winvideo',1);
+set(obj,'ReturnedColorSpace','grayscale');
+bboxes=[];
+count=0;
+
+while(1)
+    %%preview(obj);
+    data=getsnapshot(obj);
+    count=count+1;
+    count
+ if ~isempty(bboxes)
+       bboxes  
+        
+        points_box=detectSURFFeatures(I);
+        
+        points=detectSURFFeatures(data(:,:,1));
+        
+        
+        [boxFeatures, points_box] = extractFeatures(I, points_box);
+        [sceneFeatures, points] = extractFeatures(data(:,:,1),points);
+
+        boxPairs = matchFeatures(boxFeatures, sceneFeatures);
+        
+        matchedBoxPoints = points_box(boxPairs(:, 1), :);
+        matchedScenePoints = points(boxPairs(:, 2), :);
+        
+        
+        showMatchedFeatures(I, data(:,:,1), matchedBoxPoints, ...
+        matchedScenePoints, 'montage');
+        hold on;
+        if(count>15)
+            bboxes=[];
+        end
+
+   % if isempty(boxPairs)
+   %     bboxes=[];
+   % end
+    
+    %plot(matchedScenePoints);
+ else
+       faceDetector = vision.CascadeObjectDetector;
+       bboxes = step(faceDetector, data);
+       if ~isempty(bboxes) 
+       I=imcrop(data,bboxes(1,:));
+       I=I(:,:,1);
+       end
+       count=0;
+   end  
+   %% IFaces = insertObjectAnnotation(data, 'rectangle', bboxes, 'Face');
+  %% figure, 
+  %% imshow(IFaces), title('Detected faces');
+ 
+  
+   
+end
